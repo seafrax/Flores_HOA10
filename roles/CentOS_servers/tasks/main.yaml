@@ -1,0 +1,87 @@
+---
+- name: Add Elasticsearch GPG key
+  rpm_key:
+    key: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    state: present
+
+- name: Add Elasticsearch repository
+  yum_repository:
+    name: elasticsearch
+    description: Elasticsearch repository for 7.x packages
+    baseurl: https://artifacts.elastic.co/packages/7.x/yum
+    gpgcheck: 1
+    enabled: 1
+    gpgkey: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+
+- name: Install Java OpenJDK (required by Elasticsearch)
+  yum:
+    name: java-11-openjdk
+    state: present
+
+- name: Install Elasticsearch package
+  yum:
+    name: elasticsearch
+    state: present
+
+- name: Install Logstash package
+  yum:
+    name: logstash
+    state: present
+
+- name: Install Kibana package
+  yum:
+    name: kibana
+    state: present
+
+- name: Start and enable Elasticsearch service
+  systemd:
+    name: elasticsearch
+    enabled: yes
+    state: started
+
+- name: Start and enable Logstash service
+  systemd:
+    name: logstash
+    enabled: yes
+    state: started
+
+- name: Start and enable Kibana service
+  systemd:
+    name: kibana
+    enabled: yes
+    state: started
+
+- name: Wait for Elasticsearch to start
+  wait_for:
+    port: 9200
+    timeout: 60
+
+- name: Wait for Kibana to start
+  wait_for:
+    port: 5601
+    timeout: 60
+
+- name: Configure firewall to allow accessing Elasticsearch and Kibana
+  firewalld:
+    service: "{{ item }}"
+    permanent: true
+    state: enabled
+    immediate: true
+  with_items:
+    - elasticsearch
+    - kibana
+
+- name: Restart Elasticsearch service
+  systemd:
+    name: elasticsearch
+    state: restarted
+
+- name: Restart Logstash service
+  systemd:
+    name: logstash
+    state: restarted
+
+- name: Restart Kibana service
+  systemd:
+    name: kibana
+    state: restarted

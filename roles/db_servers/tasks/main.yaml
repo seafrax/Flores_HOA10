@@ -1,0 +1,101 @@
+---
+- name: Add Elasticsearch GPG key
+  apt_key:
+    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    state: present
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install Java OpenJDK (required by Elasticsearch)
+  apt:
+    name: openjdk-11-jdk
+    state: present
+
+- name: Add Elasticsearch repository key
+  apt_key:
+    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+  become: yes
+
+- name: Add Elasticsearch APT repository
+  apt_repository:
+    repo: deb https://artifacts.elastic.co/packages/7.x/apt stable main
+    state: present
+    filename: elastic
+  become: yes
+
+- name: Update apt packages cache
+  apt:
+    update_cache: yes
+  become: yes
+
+- name: Install Elasticsearch package
+  apt:
+    name: elasticsearch
+    state: present
+  become: yes
+
+- name: Install Logstash package
+  apt:
+    name: logstash
+    state: present
+  become: yes
+
+- name: Install Kibana package
+  apt:
+    name: kibana
+    state: present
+  become: yes
+
+- name: Start and enable Elasticsearch service
+  systemd:
+    name: elasticsearch
+    enabled: yes
+    state: started
+
+- name: Start and enable Logstash service
+  systemd:
+    name: logstash
+    enabled: yes
+    state: started
+
+- name: Start and enable Kibana service
+  systemd:
+    name: kibana
+    enabled: yes
+    state: started
+
+- name: Wait for Elasticsearch to start
+  wait_for:
+    port: 9200
+    timeout: 60
+
+- name: Wait for Kibana to start
+  wait_for:
+    port: 5601
+    timeout: 60
+
+- name: Configure system to allow accessing Elasticsearch and Kibana
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  with_items:
+    - 9200
+    - 5601
+
+- name: Restart Elasticsearch service
+  systemd:
+    name: elasticsearch
+    state: restarted
+
+- name: Restart Logstash service
+  systemd:
+    name: logstash
+    state: restarted
+
+- name: Restart Kibana service
+  systemd:
+    name: kibana
+    state: restarted
